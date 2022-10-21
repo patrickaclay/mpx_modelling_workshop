@@ -27,7 +27,7 @@ set.seed(12345)
 load(here("mpx_network_object.rda"))
 
 # source modules for stergm
-source(here("network_modules.R"))
+source(here("workshop_network_modules.R"))
 
 #Set parameters
 reps <- 20 #number of runs per parameter combination
