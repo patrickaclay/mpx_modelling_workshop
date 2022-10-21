@@ -1,6 +1,8 @@
 # Predictive Modeling Workshop
 # N = 6 cases
 
+# Code adapted from Lessler et al. Times to key events in Zika virus infection and implications for blood donation: a systematic review - PMC (nih.gov)
+# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5096355/
 
 
 library(dplyr)
