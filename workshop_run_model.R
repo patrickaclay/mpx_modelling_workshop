@@ -105,8 +105,12 @@ proportion.due.to.onetime <- sum(run_results_median$si.flow.onetime.med)/sum(run
 proportion.due.to.main <- sum(run_results_median$si.flow.main.med)/sum(run_results_median$si.flow.med)
 proportion.due.to.casual <- sum(run_results_median$si.flow.casual.med)/sum(run_results_median$si.flow.med)
 
-# Alter probability of infection and the duration of infection and see how those parameters impact the proportion
+# Alter probability of infection and see how this parameter impacts the proportion
 # of cases resulting from each relationship type.
+# Note: You will probably have to alter the parameter a fair amount in order to see a change. 
+# If you lower the probability of infection far enough, you will have 
+# to increase the duration of infection to keep R0 above 1, 
+# And will have to extend the number of timesteps in order to see the epidemic through til completion. 
 
 ###################################################
 
