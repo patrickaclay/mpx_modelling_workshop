@@ -1,5 +1,6 @@
 
-# initialize_msm builds the initial network and assigns attributes to nodes
+# Here, we define the functions that run our network model
+# initialize_msm builds the initial network and assigns attributes (e.g. sexual position preference) to nodes
 # param_msm enters all model parameters
 # control_msm runs all modules in a particular order, determines number and length of runs
 # simnet_msm controls the breaking and creating of sexual contact at each timestep
@@ -17,9 +18,9 @@ param_msm <- function(init.inf = initial.number.infected,                       
                       init.hiv.age = c(0.044, 0.109, 0.154, 0.183), # prev rate among 18:24, 25:29, 30:34, 35:39
                       population.size = 10000,
 
-                      act.rate.main = sex.act.prob.main.partner, 
-                      act.rate.casual = sex.act.prob.casual.partner, 
-                      act.rate.instant = sex.act.prob.onetime.partner, 
+                      act.rate.main = sex.act.prob.main.partner, #probability of having sexual contact with main contact per timestep
+                      act.rate.casual = sex.act.prob.casual.partner, #probability of having sexual contact with casual contact per timestep
+                      act.rate.instant = sex.act.prob.onetime.partner, #probability of having sexual contact with onetime contact per timestep
 
                       inf.prob = probability.infection.per.sex.act,       # probability of infection upon sexual contact
                       i.to.r.rate = 1/length.of.infectious.period,  # natural clearance rate
@@ -38,12 +39,16 @@ param_msm <- function(init.inf = initial.number.infected,                       
 
 
 # Control Settings ####
-control_msm <- function(simno = 1,
-                        nsteps = 200,
-                        start = 1,
-                        nsims = 1,
-                        ncores = 4,
-                        cumulative.edgelist = FALSE,
+# Can be overridden in main script (e.g. can give a different value for number of simsulations
+# defines order to run functions in
+# defines number of simulations to run, number of timesteps, number of cores to use
+# also defines a few other things about network that are beyond the scope of today's lesson
+control_msm <- function(simno = 1, 
+                        nsteps = 200, 
+                        start = 1, 
+                        nsims = 1, 
+                        ncores = 4, 
+                        cumulative.edgelist = FALSE, 
                         truncate.el.cuml = 0,
                         initialize.FUN = initialize_msm,
                         progress.FUN = progress_msm,
@@ -87,23 +92,21 @@ control_msm <- function(simno = 1,
 }
 
 
-##################### Critical Network Modules #####################################
 
 #### Initialize Module #####
 # gets called once at the beginning of each simulation to construct networks
 # and master dat object 
 
-initialize_msm <- function(x, param, init, control, s) { #So this is what sets up the network that is then changed by simnet
+initialize_msm <- function(x, param, init, control, s) { #This is what sets up the network that is then changed each timestep by simnet
   
-  dat <- create_dat_object(param, init, control) #Ah, this is why everything depends on init
+  dat <- create_dat_object(param, init, control) #create data object that contains network
   
   #### Network Setup ####
   # Initial network setup
   # Simulate each network on the basis of their fits
   # Add to dat object 
-  
   dat[["nw"]] <- list()
-  nnets <- 3
+  nnets <- 3  #we have three networks (one-time, casual, main)
   for (i in 1:nnets) {
     dat[["nw"]][[i]] <- simulate( 
       x[[i]][["fit"]],
@@ -119,7 +122,7 @@ initialize_msm <- function(x, param, init, control, s) { #So this is what sets u
     dat[["nwparam"]][i] <- list(x[[i]][-which(names(x[[i]]) == "fit")])
   }
   
-  # Convert to tergmLite method
+  # Convert to tergmLite method (don't worry about what this means right now)
   dat <- init_tergmLite(dat)
   
   #### Nodal Attributes Setup ####
@@ -142,7 +145,6 @@ initialize_msm <- function(x, param, init, control, s) { #So this is what sets u
   # First we need some initial conditions parameters
   init.inf <- get_param(dat, "init.inf")
   
-  
   # Generate status vector based on num init infected 
   # starting values s / i
   # initial infections among highest-activity groups unless init size is > than size of those groups 
@@ -161,12 +163,9 @@ initialize_msm <- function(x, param, init, control, s) { #So this is what sets u
   
   status[infected] <- "i"
   
-  
-  
   # Pull sqrt age to get age 
   sqrt.age <- get_attr(dat, "sqrt.age")
   age <- sqrt.age^2
-  
 
   
   # set attributes
@@ -180,6 +179,7 @@ initialize_msm <- function(x, param, init, control, s) { #So this is what sets u
   dat[["epi"]] <- list()
   dat[["mpx_degdist"]] <- list()
   
+  #set epidemiological outcomes
   dat <- set_epi(dat, "num", at = 1,  num)
   dat <- set_epi(dat, "cuml.infs", at = 1, init.inf)
   dat <- set_epi(dat, "prev", at = 1, init.inf)
@@ -220,23 +220,19 @@ initialize_msm <- function(x, param, init, control, s) { #So this is what sets u
 
 
 
-#### Simnet -- Simulate Networks & Update Coefs based on pop size changes ###############
+#### Simnet -- Simulate Networks ###############
 simnet_msm <- function(dat, at) {
-  
-
-  
-  
+ 
   ## Grab parameters from dat object 
   cumulative.edgelist <- get_control(dat, "cumulative.edgelist") # are we tracking the cumulative edgelist (T/F)
   truncate.el.cuml <- get_control(dat, "truncate.el.cuml")       # how long in the past do we keep edgelist
   set.control.stergm <- get_control(dat, "set.control.stergm")   # specific control settings for network simulation
   set.control.ergm <- get_control(dat, "set.control.ergm")       # specific control settings for network simulation
   
-  
 
   ## Main network
-  for (i in 1:length(dat$el)) {    #I believe this is where loops through overlapping networks
-    nwparam <- EpiModel::get_nwparam(dat, network = i)   #get parameters of this network
+  for (i in 1:length(dat$el)) {    #loop over relationships in model to see if they end
+    nwparam <- EpiModel::get_nwparam(dat, network = i)   #get parameters of this network (specifically, length of relationship)
     isTERGM <- ifelse(nwparam$coef.diss$duration > 1, TRUE, FALSE) #set isTERGM to true is relationships non-instantaneous
     
     nwL <- networkLite(dat[["el"]][[i]], dat[["attr"]])
@@ -337,6 +333,7 @@ simnet_msm <- function(dat, at) {
 infect_msm2 <- function(dat, at) {
   
   # model-specific discordant edgelist function
+  #essentially here we make a function for finding the contacts between infectious and susceptible individuals
   discord_edgelist_mpx <- function (dat, at, network){ 
     status <- get_attr(dat, "status")
     active <- get_attr(dat, "active")
@@ -486,6 +483,7 @@ infect_msm2 <- function(dat, at) {
 # Disease Progression ####
 progress_msm <- function(dat, at) {
   
+  # s - susceptible
   # i  - symptomatic and infectious
   # r  - recovered and immune 
   
@@ -493,11 +491,7 @@ progress_msm <- function(dat, at) {
   active <- get_attr(dat, "active")
   status <- get_attr(dat, "status")
 
-    
-
   i.to.r.rate <-     get_param(dat, "i.to.r.rate")
-
-  
 
     ## Natural Recovery among i
     nRec       <- 0
@@ -513,12 +507,6 @@ progress_msm <- function(dat, at) {
       }
     }
     
-
-    
-  
-  
-
-  
   
   # Update attributes
   dat <- set_attr(dat, "status", status)
