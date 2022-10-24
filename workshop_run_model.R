@@ -29,31 +29,26 @@ load(here("mpx_network_object.rda"))
 # source modules for stergm
 source(here("workshop_network_modules.R"))
 
-#Set parameters
-reps <- 20 #number of runs per parameter combination
-cores <- detectCores() # don't do this on the cluster 
-if (cores < reps) {ncores <- 5} #number of cores to use, can increase if desired
-if (cores >= reps) {ncores <- reps} #number of cores to use
-
 
 # Set parameters 
-probability.infection.per.sex.act <- 0.6 
-length.of.infectious.period <- 27  #in days
+probability.infection.per.sex.act <- 0.9 
+length.of.infectious.period <- 60  #in days
 initial.number.infected <- 10
-sex.act.prob.main.partner <- 0.22 #22% chance per day of having sex with main partner
-sex.act.prob.casual.partner <- 0.14 #14% chance per day of having sex with casual parter
-sex.act.prob.onetime.partner <- 1 #one-time partnerships last 1 day, with 100% probability of sexual contact
+sex.act.prob.main.partner <- 1 #chance per day of having sex with main partner (set at 100% for demo purposes)
+sex.act.prob.casual.partner <- 1 #chance per day of having sex with casual parter (set at 100% for demo purposes)
+sex.act.prob.onetime.partner <- 1 #chance per day of having sex with casual parter (100% by definition)
 
 # load in parameters
 params <- param_msm()
-# sequence of modules to run model, set duration and number simulations
-controls <- control_msm(nsteps = 100, nsims=reps, ncores=ncores)
+# sequence of modules to run model, set duration and number simulations, and how many cores to use
+controls <- control_msm(nsteps = 700, nsims=1, ncores=1)
 # initial conditions
 inits <- init_msm()
 # run simulation
 sim <- netsim(est, params, inits, controls)
 #you can look at the various model outputs with sim$epi$ and then looking at autofill options
-#extract medians and interquartile ranges
+#extract medians and interquartile ranges (note, this extracts values for if you increase number of simulations)
+#we currently only run one simulation so this will just give you output of that single sim. 
 run_results_median <- extract_med_iqr(sim)
 
 ##########################
@@ -110,9 +105,8 @@ proportion.due.to.onetime <- sum(run_results_median$si.flow.onetime.med)/sum(run
 proportion.due.to.main <- sum(run_results_median$si.flow.main.med)/sum(run_results_median$si.flow.med)
 proportion.due.to.casual <- sum(run_results_median$si.flow.casual.med)/sum(run_results_median$si.flow.med)
 
-# remember, if you lower probability of infection or infectious period enough, 
-# you will have to increase the other parameter or else the infection will not 
-# spread
+# Alter probability of infection and the duration of infection and see how those parameters impact the proportion
+# of cases resulting from each relationship type.
 
 ###################################################
 
@@ -120,7 +114,7 @@ proportion.due.to.casual <- sum(run_results_median$si.flow.casual.med)/sum(run_r
 # by setting the corresponding sex.act.prob parameter to 0.
 # Examine the prevalence curve (figure 2) if you run the epidemic with only
 # one-time, only main, or only casual relationships. Can any relationship type alone
-# sustain transmission?
+# sustain transmission? (start with a high probability of infection and a long infectious period to test this)
 
 # Consider the following details:
 # Individuals in the model can have 0, 1, or 2 casual relationships at a give time, 
